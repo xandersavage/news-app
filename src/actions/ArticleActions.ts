@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 import type { Article } from "@/data/mockData";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { revalidatePath } from "next/cache";
 
 type CreateArticleResult =
   | { success: true; article: Article }
@@ -100,6 +101,7 @@ export async function createArticle(
     const categoryInput = (formData.get("categoryId") as string) || null;
     const isFeatured = formData.get("isFeatured") === "on";
     const isPublished = formData.get("isPublished") === "on";
+    const publishDate = (formData.get("publishDate") as string) || null;
     const coverFile = (formData.get("coverImage") as File) || null;
 
     if (!title || !content) {
@@ -171,6 +173,11 @@ export async function createArticle(
       cover_image: coverUrl,
     };
 
+    // Add publish_date to the payload if provided
+    if (publishDate) {
+      insertPayload.publish_date = publishDate;
+    }
+
     const { data, error } = await supabase
       .from("articles")
       .insert(insertPayload)
@@ -214,4 +221,133 @@ export async function createArticle(
       error: "An unexpected error occurred while creating the article.",
     };
   }
+}
+
+// --- Utility Function to Extract Storage Path ---
+/**
+ * Extracts the file path from a Supabase public URL.
+ * The path should be relative to the bucket (e.g., 'covers/image.jpg')
+ * @param publicUrl The full public URL of the file.
+ * @param bucketName The name of the storage bucket.
+ * @returns The storage path or null if not found.
+ */
+function getStoragePathFromUrl(
+  publicUrl: string,
+  bucketName: string
+): string | null {
+  try {
+    // Supabase public URLs typically follow this pattern:
+    // https://[project-ref].supabase.co/storage/v1/object/public/[bucket-name]/[file-path]
+
+    // Look for the pattern: /object/public/{bucketName}/
+    const pattern = `/object/public/${bucketName}/`;
+    const index = publicUrl.indexOf(pattern);
+
+    if (index !== -1) {
+      // Extract everything after the bucket name
+      const path = publicUrl.substring(index + pattern.length);
+      console.log(`[STORAGE PATH] Extracted path: ${path}`);
+      return path;
+    }
+
+    // Fallback: try splitting by 'public/' and then by bucket name
+    const parts = publicUrl.split("public/");
+    if (parts.length > 1) {
+      const afterPublic = parts[1];
+      // Remove bucket name if it's at the start
+      if (afterPublic.startsWith(`${bucketName}/`)) {
+        const path = afterPublic.substring(bucketName.length + 1);
+        console.log(`[STORAGE PATH] Extracted path (fallback): ${path}`);
+        return path;
+      }
+    }
+
+    console.error("[STORAGE PATH] Could not extract path from URL:", publicUrl);
+    return null;
+  } catch (error) {
+    console.error("[STORAGE PATH] Error parsing URL:", error);
+    return null;
+  }
+}
+
+// --- CORE SERVER ACTION: DELETE ARTICLE ---
+/**
+ * Deletes an article by ID, ensuring user authentication, cleaning up the
+ * associated cover image from Supabase Storage, and revalidating the cache.
+ * @param articleId The ID of the article to delete.
+ */
+export async function deleteArticle(articleId: string) {
+  const supabase = await createClient();
+
+  // 1. Authentication Check (Always first for mutations!)
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("User not authenticated or session expired.");
+  }
+
+  // 2. Fetch Data, Check Authorization, and Get Image URL
+  // We must retrieve the image URL BEFORE deleting the database row.
+  const { data: articleCheck, error: checkError } = await supabase
+    .from("articles")
+    .select("author_id, cover_image")
+    .eq("id", articleId)
+    .single();
+
+  if (checkError || !articleCheck) {
+    throw new Error("Article not found or access denied.");
+  }
+
+  // 3. Image Deletion (Cleanup step)
+  const imageUrl = articleCheck.cover_image;
+
+  if (imageUrl) {
+    const bucketName = "articles";
+    const storagePath = getStoragePathFromUrl(imageUrl, bucketName);
+
+    if (storagePath) {
+      console.log(
+        `[STORAGE DELETE] Attempting to delete: ${storagePath} from bucket: ${bucketName}`
+      );
+
+      const { data: removeData, error: storageError } = await supabase.storage
+        .from(bucketName)
+        .remove([storagePath]);
+
+      if (storageError) {
+        console.error("[STORAGE DELETE ERROR]", storageError);
+        console.warn(
+          "Storage Cleanup Warning: Failed to delete image from bucket.",
+          storageError
+        );
+      } else {
+        console.log("[STORAGE DELETE SUCCESS]", removeData);
+      }
+    } else {
+      console.warn(
+        "[STORAGE DELETE] Could not extract storage path from URL:",
+        imageUrl
+      );
+    }
+  }
+
+  // 4. Database Deletion
+  const { error: deleteError } = await supabase
+    .from("articles")
+    .delete()
+    .eq("id", articleId);
+
+  if (deleteError) {
+    console.error("Database Delete Error:", deleteError);
+    throw new Error("Failed to delete article from database.");
+  }
+
+  // 5. Client Refresh
+  // Revalidates the cache for the articles list to reflect the deletion instantly.
+  revalidatePath("/admin/dashboard/articles");
+  console.log(
+    "[DELETE ARTICLE] Successfully deleted article and cleaned up resources"
+  );
 }

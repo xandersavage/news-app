@@ -10,8 +10,9 @@ import {
   Moon,
   Sun
 } from 'lucide-react';
-import { useTheme } from '../../contexts/ThemeContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { Button } from '../ui/button';
+import { Toaster } from '../ui/sonner';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -37,6 +38,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 transition-colors">
+      <Toaster />
       {/* Top Navigation */}
       <header className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40">
         <div className="flex items-center justify-between px-4 h-16">
@@ -70,7 +72,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
                 <Moon className="w-5 h-5 text-gray-600" />
               )}
             </button>
-            
+
             <Button
               variant="ghost"
               onClick={onLogout}
@@ -98,7 +100,7 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({
             {menuItems.map((item) => {
               const Icon = item.icon;
               const isActive = currentView === item.id;
-              
+
               return (
                 <button
                   key={item.id}
