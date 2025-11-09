@@ -270,84 +270,109 @@ function getStoragePathFromUrl(
   }
 }
 
-// --- CORE SERVER ACTION: DELETE ARTICLE ---
+// Replace your existing deleteArticle function with this version
+
 /**
  * Deletes an article by ID, ensuring user authentication, cleaning up the
  * associated cover image from Supabase Storage, and revalidating the cache.
  * @param articleId The ID of the article to delete.
+ * @returns An object with success status and optional error message
  */
-export async function deleteArticle(articleId: string) {
-  const supabase = await createClient();
+export async function deleteArticle(
+  articleId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createClient();
 
-  // 1. Authentication Check (Always first for mutations!)
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    // 1. Authentication Check (Always first for mutations!)
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-  if (!user) {
-    throw new Error("User not authenticated or session expired.");
-  }
-
-  // 2. Fetch Data, Check Authorization, and Get Image URL
-  // We must retrieve the image URL BEFORE deleting the database row.
-  const { data: articleCheck, error: checkError } = await supabase
-    .from("articles")
-    .select("author_id, cover_image")
-    .eq("id", articleId)
-    .single();
-
-  if (checkError || !articleCheck) {
-    throw new Error("Article not found or access denied.");
-  }
-
-  // 3. Image Deletion (Cleanup step)
-  const imageUrl = articleCheck.cover_image;
-
-  if (imageUrl) {
-    const bucketName = "articles";
-    const storagePath = getStoragePathFromUrl(imageUrl, bucketName);
-
-    if (storagePath) {
-      console.log(
-        `[STORAGE DELETE] Attempting to delete: ${storagePath} from bucket: ${bucketName}`
-      );
-
-      const { data: removeData, error: storageError } = await supabase.storage
-        .from(bucketName)
-        .remove([storagePath]);
-
-      if (storageError) {
-        console.error("[STORAGE DELETE ERROR]", storageError);
-        console.warn(
-          "Storage Cleanup Warning: Failed to delete image from bucket.",
-          storageError
-        );
-      } else {
-        console.log("[STORAGE DELETE SUCCESS]", removeData);
-      }
-    } else {
-      console.warn(
-        "[STORAGE DELETE] Could not extract storage path from URL:",
-        imageUrl
-      );
+    if (!user) {
+      return {
+        success: false,
+        error: "User not authenticated or session expired.",
+      };
     }
+
+    // 2. Fetch Data, Check Authorization, and Get Image URL
+    // We must retrieve the image URL BEFORE deleting the database row.
+    const { data: articleCheck, error: checkError } = await supabase
+      .from("articles")
+      .select("author_id, cover_image")
+      .eq("id", articleId)
+      .single();
+
+    if (checkError || !articleCheck) {
+      return {
+        success: false,
+        error: "Article not found or access denied.",
+      };
+    }
+
+    // 3. Image Deletion (Cleanup step)
+    const imageUrl = articleCheck.cover_image;
+
+    if (imageUrl) {
+      const bucketName = "articles";
+      const storagePath = getStoragePathFromUrl(imageUrl, bucketName);
+
+      if (storagePath) {
+        console.log(
+          `[STORAGE DELETE] Attempting to delete: ${storagePath} from bucket: ${bucketName}`
+        );
+
+        const { data: removeData, error: storageError } = await supabase.storage
+          .from(bucketName)
+          .remove([storagePath]);
+
+        if (storageError) {
+          console.error("[STORAGE DELETE ERROR]", storageError);
+          console.warn(
+            "Storage Cleanup Warning: Failed to delete image from bucket.",
+            storageError
+          );
+          // Don't fail the entire operation if storage deletion fails
+        } else {
+          console.log("[STORAGE DELETE SUCCESS]", removeData);
+        }
+      } else {
+        console.warn(
+          "[STORAGE DELETE] Could not extract storage path from URL:",
+          imageUrl
+        );
+      }
+    }
+
+    // 4. Database Deletion
+    const { error: deleteError } = await supabase
+      .from("articles")
+      .delete()
+      .eq("id", articleId);
+
+    if (deleteError) {
+      console.error("Database Delete Error:", deleteError);
+      return {
+        success: false,
+        error: "Failed to delete article from database.",
+      };
+    }
+
+    // 5. Client Refresh
+    // Revalidates the cache for the articles list to reflect the deletion instantly.
+    revalidatePath("/admin/dashboard/articles");
+    console.log(
+      "[DELETE ARTICLE] Successfully deleted article and cleaned up resources"
+    );
+
+    return { success: true };
+  } catch (error) {
+    console.error("[DELETE ARTICLE ERROR]", error);
+    return {
+      success: false,
+      error:
+        error instanceof Error ? error.message : "An unexpected error occurred",
+    };
   }
-
-  // 4. Database Deletion
-  const { error: deleteError } = await supabase
-    .from("articles")
-    .delete()
-    .eq("id", articleId);
-
-  if (deleteError) {
-    console.error("Database Delete Error:", deleteError);
-    throw new Error("Failed to delete article from database.");
-  }
-
-  // 5. Client Refresh
-  // Revalidates the cache for the articles list to reflect the deletion instantly.
-  revalidatePath("/admin/dashboard/articles");
-  console.log(
-    "[DELETE ARTICLE] Successfully deleted article and cleaned up resources"
-  );
 }

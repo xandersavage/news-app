@@ -172,27 +172,61 @@ export class ArticleService {
     categoryId: string,
     limit: number = 4
   ): Promise<Article[]> {
-    const { data, error } = await this.supabase
-      .from("articles")
-      .select(
-        `
-        *,
-        categories (*),
-        authors (*)
-      `
-      )
-      .eq("published", true)
-      .eq("category_id", categoryId)
-      .neq("id", articleId)
-      .order("publish_date", { ascending: false })
-      .limit(limit);
+    try {
+      console.log(
+        `Fetching related articles for category: ${categoryId}, excluding article: ${articleId}`
+      );
 
-    if (error) {
-      console.error("Error fetching related articles:", error);
+      const { data, error } = await this.supabase
+        .from("articles")
+        .select("*")
+        .eq("published", true)
+        .eq("category_id", categoryId)
+        .neq("id", articleId)
+        .order("publish_date", { ascending: false })
+        .limit(limit);
+
+      if (error) {
+        console.error("Error fetching related articles:", error);
+        console.error("Error details:", JSON.stringify(error, null, 2));
+        return [];
+      }
+
+      if (!data || data.length === 0) {
+        console.log("No related articles found");
+        return [];
+      }
+
+      console.log(`Found ${data.length} related articles`);
+
+      // Now fetch categories and authors for related articles
+      const categoryIds = [...new Set(data.map((a) => a.category_id))];
+      const authorIds = [...new Set(data.map((a) => a.author_id))];
+
+      const [categoriesResult, authorsResult] = await Promise.all([
+        this.supabase.from("categories").select("*").in("id", categoryIds),
+        this.supabase.from("authors").select("*").in("id", authorIds),
+      ]);
+
+      const categoriesMap = new Map(
+        (categoriesResult.data || []).map((c) => [c.id, c])
+      );
+      const authorsMap = new Map(
+        (authorsResult.data || []).map((a) => [a.id, a])
+      );
+
+      // Combine the data
+      const articlesWithRelations = data.map((article) => ({
+        ...article,
+        categories: categoriesMap.get(article.category_id),
+        authors: authorsMap.get(article.author_id),
+      }));
+
+      return articlesWithRelations.map(transformArticle);
+    } catch (err) {
+      console.error("Exception in getRelatedArticles:", err);
       return [];
     }
-
-    return (data as ArticleWithRelations[]).map(transformArticle);
   }
 
   /**
