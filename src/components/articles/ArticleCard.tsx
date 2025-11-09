@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Clock } from "lucide-react";
-import { Article } from "@/data/mockData";
+import { Article } from "@/types";
 import { Badge } from "@/components/ui/badge";
 
 interface ArticleCardProps {
@@ -25,6 +25,17 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
     });
   };
 
+  // Calculate estimated read time based on content length
+  const calculateReadTime = (content: string): number => {
+    // Remove HTML tags for word count
+    const text = content.replace(/<[^>]*>/g, "");
+    const words = text.trim().split(/\s+/).length;
+    const wordsPerMinute = 200;
+    return Math.ceil(words / wordsPerMinute);
+  };
+
+  const readTime = calculateReadTime(article.content);
+
   if (variant === "featured") {
     return (
       <div
@@ -43,18 +54,20 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
           <Badge className="bg-[#007BFF] hover:bg-[#0056b3] mb-4">
             {article.category}
           </Badge>
-          <h2 className="text-white mb-3 group-hover:text-gray-200 transition-colors font-serif">
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-3 group-hover:text-gray-200 transition-colors font-serif">
             {article.title}
           </h2>
-          <p className="text-gray-2 00 mb-4 line-clamp-2">{article.summary}</p>
-          <div className="flex items-center gap-4 text-gray-300">
+          <p className="text-gray-200 text-lg mb-4 line-clamp-2">
+            {article.summary}
+          </p>
+          <div className="flex items-center gap-4 text-gray-300 text-sm">
             <span>{article.author}</span>
             <span>•</span>
             <span>{formatDate(article.publishDate)}</span>
             <span>•</span>
             <div className="flex items-center gap-1">
               <Clock className="w-4 h-4" />
-              <span>{article.readTime} min read</span>
+              <span>{readTime} min read</span>
             </div>
           </div>
         </div>
@@ -82,15 +95,15 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
           >
             {article.category}
           </Badge>
-          <h3 className="text-gray-900 dark:text-white mb-1 line-clamp-2 group-hover:text-[#007BFF] dark:group-hover:text-[#007BFF] transition-colors">
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-1 line-clamp-2 group-hover:text-[#007BFF] dark:group-hover:text-[#007BFF] transition-colors">
             {article.title}
           </h3>
-          <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+          <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
             <span className="truncate">{article.author}</span>
             <span>•</span>
             <div className="flex items-center gap-1">
               <Clock className="w-3 h-3" />
-              <span>{article.readTime} min</span>
+              <span>{readTime} min</span>
             </div>
           </div>
         </div>
@@ -117,20 +130,20 @@ export const ArticleCard: React.FC<ArticleCardProps> = ({
         >
           {article.category}
         </Badge>
-        <h3 className="text-gray-900 dark:text-white mb-2 line-clamp-2 group-hover:text-[#007BFF] dark:group-hover:text-[#007BFF] transition-colors">
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2 line-clamp-2 group-hover:text-[#007BFF] dark:group-hover:text-[#007BFF] transition-colors">
           {article.title}
         </h3>
         <p className="text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">
           {article.summary}
         </p>
-        <div className="flex items-center gap-3 text-gray-500 dark:text-gray-400">
+        <div className="flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
           <span>{article.author}</span>
           <span>•</span>
           <span>{formatDate(article.publishDate)}</span>
           <span>•</span>
           <div className="flex items-center gap-1">
             <Clock className="w-4 h-4" />
-            <span>{article.readTime} min</span>
+            <span>{readTime} min</span>
           </div>
         </div>
       </div>
