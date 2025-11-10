@@ -16,13 +16,12 @@ import Image from "next/image";
 import { DeleteArticleDialog } from "./DeleteArticleDialog";
 import { deleteArticle } from "@/actions/ArticleActions";
 
-// Fetch articles from server API instead of using mock data
 type Article = {
   id: string;
   title: string;
   slug: string;
   image?: string | null;
-  category: string; // This is the category name (e.g., "Politics")
+  category: string;
   author: string;
   publishDate: string;
   status: string;
@@ -46,7 +45,6 @@ async function fetchArticles(params: {
   return res.json();
 }
 
-// --- UTILITIES ---
 const getCategoryClasses = (category: string): string => {
   switch (category) {
     case "Politics":
@@ -99,7 +97,6 @@ const getStatusBadge = (status: string) => {
   }
 };
 
-// --- MAIN COMPONENT ---
 export const ArticleList: React.FC = () => {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
@@ -116,7 +113,6 @@ export const ArticleList: React.FC = () => {
   useEffect(() => {
     let mounted = true;
     const load = async () => {
-      // Show searching indicator only when user is typing
       if (searchQuery) {
         setIsSearching(true);
       } else {
@@ -164,8 +160,11 @@ export const ArticleList: React.FC = () => {
   };
 
   const handleDeleteSuccess = () => {
-    // Trigger a refresh of the articles list
     setRefreshTrigger((prev) => prev + 1);
+  };
+
+  const handleEditClick = (articleId: string) => {
+    router.push(`/admin/dashboard/articles/${articleId}/edit`);
   };
 
   const totalPages = Math.ceil(total / pageSize);
@@ -326,6 +325,7 @@ export const ArticleList: React.FC = () => {
                         <Button
                           variant="ghost"
                           size="sm"
+                          onClick={() => handleEditClick(article.id)}
                           className="text-gray-600 dark:text-gray-400 hover:text-[#007BFF] dark:hover:text-[#007BFF] p-2 h-auto"
                         >
                           <Edit className="w-4 h-4" />

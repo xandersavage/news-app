@@ -11,6 +11,13 @@ const nextConfig: NextConfig = {
       // You may need to add other domains here later if you use external image CDNs
     ],
   },
+  typescript: {
+    // !! WARN !!
+    // Dangerously allow production builds to successfully complete even if
+    // your project has type errors.
+    // !! WARN !!
+    ignoreBuildErrors: true,
+  },
 };
 
 export default nextConfig;

@@ -1,5 +1,7 @@
-import React, { useState } from "react";
-import { Save, Upload, X, Image as ImageIcon } from "lucide-react";
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { Save, X, Image as ImageIcon, Loader2 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -21,8 +23,21 @@ import {
 } from "../ui/card";
 import { toast } from "sonner";
 import { TiptapEditor } from "@/components/ui/tiptap-editor";
+import { useRouter } from "next/navigation";
+import { createArticle, updateArticle } from "@/actions/ArticleActions";
 
-export const ArticleForm: React.FC = () => {
+interface ArticleFormProps {
+  article?: any;
+  mode?: "create" | "edit";
+}
+
+export const ArticleForm: React.FC<ArticleFormProps> = ({
+  article,
+  mode = "create",
+}) => {
+  const router = useRouter();
+  const isEditMode = mode === "edit";
+
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
   const [category, setCategory] = useState("");
@@ -33,7 +48,48 @@ export const ArticleForm: React.FC = () => {
   const [featured, setFeatured] = useState(false);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [existingImageUrl, setExistingImageUrl] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load article data in edit mode
+  useEffect(() => {
+    if (isEditMode && article) {
+      console.log("Loading article data:", article);
+
+      setTitle(article.title || "");
+      setSlug(article.slug || "");
+
+      // Handle category - match by name or ID
+      const categoryName = article.categories?.name || "";
+      if (categoryName && categories.includes(categoryName)) {
+        setCategory(categoryName);
+      } else if (article.category_id) {
+        // Fallback to category_id if name doesn't match
+        setCategory(article.category_id);
+      }
+
+      setSummary(article.excerpt || "");
+      setContent(article.content || "");
+      setStatus(article.published ? "published" : "draft");
+      setFeatured(article.featured || false);
+
+      if (article.publish_date) {
+        const date = new Date(article.publish_date);
+        const formattedDate = date.toISOString().split("T")[0];
+        setPublishDate(formattedDate);
+      }
+
+      if (article.cover_image) {
+        setExistingImageUrl(article.cover_image);
+        setCoverPreview(article.cover_image);
+      }
+
+      setIsLoading(false);
+    } else {
+      setIsLoading(false);
+    }
+  }, [isEditMode, article]);
 
   const handleTitleChange = (value: string) => {
     setTitle(value);
@@ -54,15 +110,14 @@ export const ArticleForm: React.FC = () => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files && e.target.files[0];
     if (f) {
-      // Validate file size (max 2MB)
       if (f.size > 2 * 1024 * 1024) {
         toast.error("Image size must be less than 2MB");
         return;
       }
 
       setCoverFile(f);
+      setExistingImageUrl(null);
 
-      // Create preview
       const reader = new FileReader();
       reader.onloadend = () => {
         setCoverPreview(reader.result as string);
@@ -76,41 +131,49 @@ export const ArticleForm: React.FC = () => {
   const handleRemoveImage = () => {
     setCoverFile(null);
     setCoverPreview(null);
+    setExistingImageUrl(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
     toast.info("Image removed");
   };
 
-  const getTodayDate = () => {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validation
+    // Validation with toast feedback
     if (!title.trim()) {
-      toast.error("Title is required");
+      toast.error("Title is required", {
+        description: "Please enter a title for your article",
+      });
       return;
     }
 
     if (!content.trim()) {
-      toast.error("Content is required");
+      toast.error("Content is required", {
+        description: "Please write some content for your article",
+      });
       return;
     }
 
     if (!category) {
-      toast.error("Please select a category");
+      toast.error("Category is required", {
+        description: "Please select a category for your article",
+      });
+      return;
+    }
+
+    if (!summary.trim()) {
+      toast.error("Summary is required", {
+        description: "Please write a brief summary for your article",
+      });
       return;
     }
 
     setIsSaving(true);
-    const loadingToast = toast.loading("Saving article...");
+    const loadingToast = toast.loading(
+      isEditMode ? "Updating article..." : "Saving article..."
+    );
 
     try {
       const fd = new FormData();
@@ -118,59 +181,86 @@ export const ArticleForm: React.FC = () => {
       fd.append("content", content);
       fd.append("excerpt", summary);
       fd.append("categoryId", category);
-      if (coverFile) fd.append("coverImage", coverFile);
+
+      if (coverFile) {
+        fd.append("coverImage", coverFile);
+      } else if (existingImageUrl) {
+        fd.append("keepExistingImage", "true");
+      }
+
       if (status === "published") fd.append("isPublished", "on");
       if (featured) fd.append("isFeatured", "on");
       if (publishDate) fd.append("publishDate", publishDate);
 
-      const res = await fetch("/api/articles", {
-        method: "POST",
-        body: fd,
-      });
-
-      const json = await res.json();
+      let result;
+      if (isEditMode && article) {
+        result = await updateArticle(article.id, fd);
+      } else {
+        result = await createArticle(fd);
+      }
 
       toast.dismiss(loadingToast);
 
-      if (!res.ok) {
-        toast.error(json.error || "Failed to save article");
+      if (!result.success) {
+        toast.error(
+          result.error || `Failed to ${isEditMode ? "update" : "save"} article`,
+          {
+            description: "Please check your input and try again",
+          }
+        );
       } else {
-        toast.success("Article saved successfully!", {
-          description:
-            status === "published"
-              ? "Your article is now live"
-              : "Your draft has been saved",
-        });
+        toast.success(
+          isEditMode
+            ? "Article updated successfully!"
+            : "Article saved successfully!",
+          {
+            description:
+              status === "published"
+                ? "Your article is now live"
+                : "Your draft has been saved",
+          }
+        );
 
-        // Reset form fields
-        setTitle("");
-        setSlug("");
-        setCategory("");
-        setSummary("");
-        setContent("");
-        setCoverFile(null);
-        setCoverPreview(null);
-        setPublishDate("");
-        setStatus("draft");
+        // Redirect to articles list after a short delay
+        setTimeout(() => {
+          router.push("/admin/dashboard/articles");
+        }, 1000);
       }
     } catch (err) {
       toast.dismiss(loadingToast);
       console.error("Save article error:", err);
-      toast.error("An unexpected error occurred");
+      toast.error("An unexpected error occurred", {
+        description:
+          "Please try again or contact support if the problem persists",
+      });
     } finally {
       setIsSaving(false);
     }
   };
+
+  // Show loading state while article data is being loaded
+  if (isEditMode && isLoading) {
+    return (
+      <div className="max-w-5xl mx-auto">
+        <div className="flex flex-col items-center justify-center py-16">
+          <Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-3" />
+          <p className="text-gray-500 dark:text-gray-400">Loading article...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-5xl mx-auto">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-          Create New Article
+          {isEditMode ? "Edit Article" : "Create New Article"}
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
-          Fill in the details below to create and publish your article
+          {isEditMode
+            ? "Update your article details below"
+            : "Fill in the details below to create and publish your article"}
         </p>
       </div>
 
@@ -318,6 +408,11 @@ export const ArticleForm: React.FC = () => {
                     {coverFile.name} ({(coverFile.size / 1024).toFixed(1)} KB)
                   </p>
                 )}
+                {!coverFile && existingImageUrl && (
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                    Current image (no changes)
+                  </p>
+                )}
               </div>
             )}
           </CardContent>
@@ -334,7 +429,6 @@ export const ArticleForm: React.FC = () => {
           <CardContent>
             <TiptapEditor content={content} onChange={setContent} />
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-              {/* Estimate reading time based on HTML content */}
               {Math.ceil(
                 (content
                   .replace(/<[^>]*>/g, "")
@@ -431,13 +525,8 @@ export const ArticleForm: React.FC = () => {
             <Button
               type="button"
               variant="outline"
-              onClick={() => {
-                if (
-                  confirm("Are you sure? All unsaved changes will be lost.")
-                ) {
-                  window.location.reload();
-                }
-              }}
+              onClick={() => router.back()}
+              disabled={isSaving}
             >
               Cancel
             </Button>
@@ -446,8 +535,17 @@ export const ArticleForm: React.FC = () => {
               className="bg-[#007BFF] hover:bg-[#0056b3]"
               disabled={isSaving}
             >
-              <Save className="w-4 h-4 mr-2" />
-              {isSaving ? "Saving..." : "Save Article"}
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  {isEditMode ? "Updating..." : "Saving..."}
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" />
+                  {isEditMode ? "Update Article" : "Save Article"}
+                </>
+              )}
             </Button>
           </div>
         </div>
