@@ -39,6 +39,7 @@ C:\USERS\ALEXANDER OLOMOKORO\DOCUMENTS\CLIENT WORK\NEWS\SRC
 |   |       ArticleForm.tsx
 |   |       ArticleList.tsx
 |   |       DashboardOverview.tsx
+|   |       DeleteArticleDialog.tsx
 |   |       LoginPage.tsx
 |   |       
 |   +---articles
@@ -96,6 +97,7 @@ C:\USERS\ALEXANDER OLOMOKORO\DOCUMENTS\CLIENT WORK\NEWS\SRC
 |           table.tsx
 |           tabs.tsx
 |           textarea.tsx
+|           tiptap-editor.tsx
 |           toggle-group.tsx
 |           toggle.tsx
 |           tooltip.tsx
@@ -109,7 +111,15 @@ C:\USERS\ALEXANDER OLOMOKORO\DOCUMENTS\CLIENT WORK\NEWS\SRC
 +---data
 |       mockData.ts
 |       
++---lib
+|       utils.ts
+|       
 +---services
+|       articleService.ts
+|       
++---types
+|       index.ts
+|       
 \---utils
     \---supabase
             client.ts

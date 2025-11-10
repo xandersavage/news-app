@@ -1,20 +1,20 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Article } from "@/types";
 import { articleService } from "@/services/articleService";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import HomePage from "@/components/home/HomePage";
-import ArticleView from "@/components/articles/ArticleView";
 
 const Page = () => {
+  const router = useRouter();
   const [articles, setArticles] = useState<Article[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
-  const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
 
   // Fetch articles and categories on mount
   useEffect(() => {
@@ -37,21 +37,9 @@ const Page = () => {
     fetchData();
   }, []);
 
-  // Get related articles when an article is selected
-  const getRelatedArticles = async (article: Article): Promise<Article[]> => {
-    if (!article) return [];
-
-    const related = await articleService.getRelatedArticles(
-      article.id,
-      article.categoryId,
-      4
-    );
-
-    return related;
-  };
-
-  const handleArticleClick = async (article: Article) => {
-    setSelectedArticle(article);
+  const handleArticleClick = (article: Article) => {
+    // Navigate to the article page using its slug
+    router.push(`/articles/${article.slug}`);
   };
 
   if (loading) {
@@ -76,24 +64,13 @@ const Page = () => {
           currentCategory={categoryFilter}
           onCategoryClick={(c) => {
             setCategoryFilter(c);
-            setSelectedArticle(null);
           }}
-          // categories={categories}
         />
-        {selectedArticle ? (
-          <ArticleView
-            article={selectedArticle}
-            onBack={() => setSelectedArticle(null)}
-            onArticleClick={handleArticleClick}
-            getRelatedArticles={getRelatedArticles}
-          />
-        ) : (
-          <HomePage
-            articles={articles}
-            onArticleClick={handleArticleClick}
-            categoryFilter={categoryFilter}
-          />
-        )}
+        <HomePage
+          articles={articles}
+          onArticleClick={handleArticleClick}
+          categoryFilter={categoryFilter}
+        />
         <Footer />
       </div>
     </ThemeProvider>
