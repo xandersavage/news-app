@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Edit, Trash2, MoreVertical, Filter } from "lucide-react";
+import { Search, Edit, Trash2, Loader2 } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -46,9 +46,7 @@ async function fetchArticles(params: {
   return res.json();
 }
 
-// --- NEW/UPDATED UTILITIES ---
-
-// 1. Utility to return specific Tailwind classes based on category name
+// --- UTILITIES ---
 const getCategoryClasses = (category: string): string => {
   switch (category) {
     case "Politics":
@@ -108,15 +106,23 @@ export const ArticleList: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
+  const [isSearching, setIsSearching] = useState<boolean>(false);
   const [page, setPage] = useState<number>(1);
   const [pageSize] = useState<number>(10);
   const [total, setTotal] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
     let mounted = true;
     const load = async () => {
-      setLoading(true);
+      // Show searching indicator only when user is typing
+      if (searchQuery) {
+        setIsSearching(true);
+      } else {
+        setLoading(true);
+      }
+
       try {
         const data = await fetchArticles({
           search: searchQuery,
@@ -127,11 +133,17 @@ export const ArticleList: React.FC = () => {
         if (!mounted) return;
         setArticles(data.data || []);
         setTotal(data.total || 0);
+        setError(null);
       } catch (err) {
         console.error("Failed to load articles", err);
-        setError("Failed to load articles");
+        if (mounted) {
+          setError("Failed to load articles");
+        }
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted) {
+          setLoading(false);
+          setIsSearching(false);
+        }
       }
     };
 
@@ -140,7 +152,7 @@ export const ArticleList: React.FC = () => {
       mounted = false;
       clearTimeout(t);
     };
-  }, [searchQuery, statusFilter, page, pageSize]);
+  }, [searchQuery, statusFilter, page, pageSize, refreshTrigger]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -150,6 +162,13 @@ export const ArticleList: React.FC = () => {
       year: "numeric",
     });
   };
+
+  const handleDeleteSuccess = () => {
+    // Trigger a refresh of the articles list
+    setRefreshTrigger((prev) => prev + 1);
+  };
+
+  const totalPages = Math.ceil(total / pageSize);
 
   return (
     <div className="space-y-6">
@@ -176,6 +195,9 @@ export const ArticleList: React.FC = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10 bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white focus:ring-blue-500 focus:border-blue-500"
           />
+          {isSearching && (
+            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500 animate-spin" />
+          )}
         </div>
 
         <div className="flex gap-2">
@@ -188,38 +210,39 @@ export const ArticleList: React.FC = () => {
             <option value="published">Published</option>
             <option value="draft">Draft</option>
           </select>
-
-          {/* <Button
-            variant="outline"
-            className="border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-          >
-            <Filter className="w-4 h-4 mr-2" />
-            More Filters
-          </Button> */}
         </div>
       </div>
 
-      {/* Articles Table */}
+      {/* Error Message */}
       {error && (
         <div className="bg-red-50 dark:bg-red-900 text-red-800 dark:text-red-200 rounded p-3">
           {error}
         </div>
       )}
 
-      {/* Loading state indicator */}
+      {/* Loading state for initial load */}
       {loading && articles.length === 0 && (
-        <div className="text-center py-10 text-gray-500 dark:text-gray-400">
-          Loading articles...
+        <div className="flex flex-col items-center justify-center py-16 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+          <Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-3" />
+          <p className="text-gray-500 dark:text-gray-400">
+            Loading articles...
+          </p>
         </div>
       )}
 
-      {/* Main Table Container */}
+      {/* Empty State */}
       {!loading && articles.length === 0 && !error && (
-        <div className="text-center py-10 text-gray-500 dark:text-gray-400 border rounded-xl bg-white dark:bg-gray-800">
-          No articles found matching the current criteria.
+        <div className="text-center py-16 text-gray-500 dark:text-gray-400 border rounded-xl bg-white dark:bg-gray-800">
+          <p className="text-lg font-medium mb-2">No articles found</p>
+          <p className="text-sm">
+            {searchQuery
+              ? "Try adjusting your search terms"
+              : "Create your first article to get started"}
+          </p>
         </div>
       )}
 
+      {/* Articles Table */}
       {articles.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div className="overflow-x-auto">
@@ -279,7 +302,6 @@ export const ArticleList: React.FC = () => {
                     <TableCell>
                       <Badge
                         variant="outline"
-                        // Apply the dynamically calculated classes here!
                         className={getCategoryClasses(article.category)}
                       >
                         {article.category}
@@ -291,7 +313,9 @@ export const ArticleList: React.FC = () => {
                     </TableCell>
                     <TableCell className="text-gray-700 dark:text-gray-300">
                       {article.status === "draft" ? (
-                        <span className="text-gray-400 dark:text-gray-500 italic">Not published</span>
+                        <span className="text-gray-400 dark:text-gray-500 italic">
+                          Not published
+                        </span>
                       ) : (
                         formatDate(article.publishDate)
                       )}
@@ -308,8 +332,8 @@ export const ArticleList: React.FC = () => {
                         </Button>
                         <DeleteArticleDialog
                           articleId={article.id}
-                          // 💡 Placeholder: We will define and import the deleteArticle Server Action here later
                           deleteAction={deleteArticle}
+                          onDeleteSuccess={handleDeleteSuccess}
                         />
                       </div>
                     </TableCell>
@@ -323,7 +347,7 @@ export const ArticleList: React.FC = () => {
           <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 dark:border-gray-700">
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Showing{" "}
-              <span>
+              <span className="font-medium">
                 {articles.length === 0
                   ? 0
                   : `${(page - 1) * pageSize + 1}-${Math.min(
@@ -331,26 +355,43 @@ export const ArticleList: React.FC = () => {
                       total
                     )}`}
               </span>{" "}
-              of <span>{total}</span> articles
+              of <span className="font-medium">{total}</span> articles
             </p>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 disabled={page === 1 || loading}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="border-gray-300 dark:border-gray-600"
+                className="border-gray-300 dark:border-gray-600 min-w-[100px]"
               >
-                Previous
+                {loading && page > 1 ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Loading
+                  </>
+                ) : (
+                  "Previous"
+                )}
               </Button>
+              <span className="text-sm text-gray-600 dark:text-gray-400 px-2">
+                Page {page} of {totalPages || 1}
+              </span>
               <Button
                 variant="outline"
                 size="sm"
-                disabled={page * pageSize >= total || loading}
+                disabled={page >= totalPages || loading}
                 onClick={() => setPage((p) => p + 1)}
-                className="border-gray-300 dark:border-gray-600"
+                className="border-gray-300 dark:border-gray-600 min-w-[100px]"
               >
-                Next
+                {loading && page < totalPages ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Loading
+                  </>
+                ) : (
+                  "Next"
+                )}
               </Button>
             </div>
           </div>

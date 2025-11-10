@@ -21,6 +21,7 @@ interface DeleteArticleDialogProps {
   deleteAction: (
     articleId: string
   ) => Promise<{ success: boolean; error?: string }>;
+  onDeleteSuccess?: () => void;
 }
 
 export const DeleteArticleDialog: React.FC<DeleteArticleDialogProps> = ({
