@@ -8,12 +8,14 @@ interface HomePageProps {
   articles: Article[];
   onArticleClick: (article: Article) => void;
   categoryFilter: string | null;
+  onCategoryFilter: (category: string) => void; // Add this new prop
 }
 
 export const HomePage: React.FC<HomePageProps> = ({
   articles,
   onArticleClick,
   categoryFilter,
+  onCategoryFilter, // Add this
 }) => {
   const featuredArticle = articles.find((a) => a.featured);
   const otherArticles = articles.filter((a) => !a.featured);
@@ -36,9 +38,17 @@ export const HomePage: React.FC<HomePageProps> = ({
     return (
       <main className="min-h-screen bg-white dark:bg-[#1E2124] transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8 font-serif">
-            {categoryFilter}
-          </h1>
+          <div className="flex items-center justify-between mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white font-serif">
+              {categoryFilter}
+            </h1>
+            <button
+              onClick={() => onCategoryFilter(null)}
+              className="text-[#007BFF] hover:underline text-sm"
+            >
+              ← Back to all articles
+            </button>
+          </div>
           {filteredArticles.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredArticles.map((article) => (
@@ -113,10 +123,10 @@ export const HomePage: React.FC<HomePageProps> = ({
                     {category}
                   </h2>
                   <button
-                    className="text-[#007BFF] hover:underline"
-                    onClick={() => onArticleClick(categoryArticles[0])}
+                    className="text-[#007BFF] hover:underline transition-colors"
+                    onClick={() => onCategoryFilter(category)} // FIXED: Now filters by category
                   >
-                    View All
+                    View All →
                   </button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

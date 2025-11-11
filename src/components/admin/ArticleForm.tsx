@@ -251,9 +251,9 @@ export const ArticleForm: React.FC<ArticleFormProps> = ({
   }
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       {/* Header */}
-      <div className="mb-8">
+      <div className="mb-6 sm:mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
           {isEditMode ? "Edit Article" : "Create New Article"}
         </h1>

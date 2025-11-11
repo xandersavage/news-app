@@ -88,8 +88,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    router.push("/admin/login");
+    try {
+      // Sign out from Supabase
+      await supabase.auth.signOut();
+
+      // Clear local state
+      setUser(null);
+      setSession(null);
+
+      // Force a hard navigation to home page to bypass middleware
+      window.location.href = "/";
+    } catch (error) {
+      console.error("Sign out error:", error);
+      // Still redirect to home even if there's an error
+      window.location.href = "/";
+    }
   };
 
   return (

@@ -1,6 +1,8 @@
+"use client";
+
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Edit, Trash2, Loader2 } from "lucide-react";
+import { Search, Edit, Trash2, Loader2, FileText } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -12,6 +14,7 @@ import {
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
+import { Card } from "../ui/card";
 import Image from "next/image";
 import { DeleteArticleDialog } from "./DeleteArticleDialog";
 import { deleteArticle } from "@/actions/ArticleActions";
@@ -170,14 +173,15 @@ export const ArticleList: React.FC = () => {
   const totalPages = Math.ceil(total / pageSize);
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+    <div className="space-y-4 sm:space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
           All Articles ({total})
         </h1>
         <Button
           onClick={() => router.push("/admin/dashboard/create")}
-          className="bg-[#007BFF] hover:bg-[#0056b3] text-white shadow-md transition-colors"
+          className="bg-[#007BFF] hover:bg-[#0056b3] text-white shadow-md transition-colors w-full sm:w-auto"
         >
           Create New Article
         </Button>
@@ -199,22 +203,20 @@ export const ArticleList: React.FC = () => {
           )}
         </div>
 
-        <div className="flex gap-2">
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-          >
-            <option value="all">All Status</option>
-            <option value="published">Published</option>
-            <option value="draft">Draft</option>
-          </select>
-        </div>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="w-full sm:w-auto px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
+        >
+          <option value="all">All Status</option>
+          <option value="published">Published</option>
+          <option value="draft">Draft</option>
+        </select>
       </div>
 
       {/* Error Message */}
       {error && (
-        <div className="bg-red-50 dark:bg-red-900 text-red-800 dark:text-red-200 rounded p-3">
+        <div className="bg-red-50 dark:bg-red-900 text-red-800 dark:text-red-200 rounded p-3 text-sm">
           {error}
         </div>
       )}
@@ -223,7 +225,7 @@ export const ArticleList: React.FC = () => {
       {loading && articles.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
           <Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-3" />
-          <p className="text-gray-500 dark:text-gray-400">
+          <p className="text-gray-500 dark:text-gray-400 text-sm">
             Loading articles...
           </p>
         </div>
@@ -232,6 +234,7 @@ export const ArticleList: React.FC = () => {
       {/* Empty State */}
       {!loading && articles.length === 0 && !error && (
         <div className="text-center py-16 text-gray-500 dark:text-gray-400 border rounded-xl bg-white dark:bg-gray-800">
+          <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
           <p className="text-lg font-medium mb-2">No articles found</p>
           <p className="text-sm">
             {searchQuery
@@ -241,111 +244,195 @@ export const ArticleList: React.FC = () => {
         </div>
       )}
 
-      {/* Articles Table */}
+      {/* Desktop Table View - Hidden on Mobile */}
       {articles.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700">
-                  <TableHead className="text-gray-700 dark:text-gray-300">
-                    Title
-                  </TableHead>
-                  <TableHead className="text-gray-700 dark:text-gray-300">
-                    Category
-                  </TableHead>
-                  <TableHead className="text-gray-700 dark:text-gray-300">
-                    Author
-                  </TableHead>
-                  <TableHead className="text-gray-700 dark:text-gray-300">
-                    Publish Date
-                  </TableHead>
-                  <TableHead className="text-gray-700 dark:text-gray-300">
-                    Status
-                  </TableHead>
-                  <TableHead className="text-gray-700 dark:text-gray-300">
-                    Actions
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {articles.map((article) => (
-                  <TableRow
-                    key={article.id}
-                    className="border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
-                  >
-                    <TableCell className="text-gray-900 dark:text-white max-w-md">
-                      <div className="flex items-center gap-3">
-                        {article.image ? (
-                          <Image
-                            src={article.image}
-                            alt={article.title}
-                            width={48}
-                            height={48}
-                            className="rounded object-cover w-12 h-12"
-                          />
-                        ) : (
-                          <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded flex-shrink-0" />
-                        )}
-                        <div className="min-w-0">
-                          <p className="font-medium truncate">
-                            {article.title}
-                          </p>
-                          <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-                            /{article.slug}
-                          </p>
-                        </div>
-                      </div>
-                    </TableCell>
-
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={getCategoryClasses(article.category)}
-                      >
-                        {article.category}
-                      </Badge>
-                    </TableCell>
-
-                    <TableCell className="text-gray-700 dark:text-gray-300">
-                      {article.author}
-                    </TableCell>
-                    <TableCell className="text-gray-700 dark:text-gray-300">
-                      {article.status === "draft" ? (
-                        <span className="text-gray-400 dark:text-gray-500 italic">
-                          Not published
-                        </span>
-                      ) : (
-                        formatDate(article.publishDate)
-                      )}
-                    </TableCell>
-                    <TableCell>{getStatusBadge(article.status)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEditClick(article.id)}
-                          className="text-gray-600 dark:text-gray-400 hover:text-[#007BFF] dark:hover:text-[#007BFF] p-2 h-auto"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <DeleteArticleDialog
-                          articleId={article.id}
-                          deleteAction={deleteArticle}
-                          onDeleteSuccess={handleDeleteSuccess}
-                        />
-                      </div>
-                    </TableCell>
+        <>
+          <div className="hidden lg:block bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700">
+                    <TableHead className="text-gray-700 dark:text-gray-300">
+                      Title
+                    </TableHead>
+                    <TableHead className="text-gray-700 dark:text-gray-300">
+                      Category
+                    </TableHead>
+                    <TableHead className="text-gray-700 dark:text-gray-300">
+                      Author
+                    </TableHead>
+                    <TableHead className="text-gray-700 dark:text-gray-300">
+                      Publish Date
+                    </TableHead>
+                    <TableHead className="text-gray-700 dark:text-gray-300">
+                      Status
+                    </TableHead>
+                    <TableHead className="text-gray-700 dark:text-gray-300">
+                      Actions
+                    </TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {articles.map((article) => (
+                    <TableRow
+                      key={article.id}
+                      className="border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+                    >
+                      <TableCell className="text-gray-900 dark:text-white max-w-md">
+                        <div className="flex items-center gap-3">
+                          {article.image ? (
+                            <Image
+                              src={article.image}
+                              alt={article.title}
+                              width={48}
+                              height={48}
+                              className="rounded object-cover w-12 h-12"
+                            />
+                          ) : (
+                            <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded flex-shrink-0" />
+                          )}
+                          <div className="min-w-0">
+                            <p className="font-medium truncate">
+                              {article.title}
+                            </p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                              /{article.slug}
+                            </p>
+                          </div>
+                        </div>
+                      </TableCell>
+
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={getCategoryClasses(article.category)}
+                        >
+                          {article.category}
+                        </Badge>
+                      </TableCell>
+
+                      <TableCell className="text-gray-700 dark:text-gray-300">
+                        {article.author}
+                      </TableCell>
+                      <TableCell className="text-gray-700 dark:text-gray-300">
+                        {article.status === "draft" ? (
+                          <span className="text-gray-400 dark:text-gray-500 italic">
+                            Not published
+                          </span>
+                        ) : (
+                          formatDate(article.publishDate)
+                        )}
+                      </TableCell>
+                      <TableCell>{getStatusBadge(article.status)}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditClick(article.id)}
+                            className="text-gray-600 dark:text-gray-400 hover:text-[#007BFF] dark:hover:text-[#007BFF] p-2 h-auto"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <DeleteArticleDialog
+                            articleId={article.id}
+                            deleteAction={deleteArticle}
+                            onDeleteSuccess={handleDeleteSuccess}
+                          />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+
+          {/* Mobile Card View - Shown on Mobile/Tablet */}
+          <div className="lg:hidden space-y-4">
+            {articles.map((article) => (
+              <Card
+                key={article.id}
+                className="p-4 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+              >
+                <div className="space-y-3">
+                  {/* Article Header with Image */}
+                  <div className="flex gap-3">
+                    {article.image ? (
+                      <Image
+                        src={article.image}
+                        alt={article.title}
+                        width={80}
+                        height={80}
+                        className="rounded object-cover w-20 h-20 flex-shrink-0"
+                      />
+                    ) : (
+                      <div className="w-20 h-20 bg-gray-200 dark:bg-gray-700 rounded flex-shrink-0 flex items-center justify-center">
+                        <FileText className="w-8 h-8 text-gray-400" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-sm text-gray-900 dark:text-white mb-1 line-clamp-2">
+                        {article.title}
+                      </h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate mb-2">
+                        /{article.slug}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge
+                          variant="outline"
+                          className={`${getCategoryClasses(
+                            article.category
+                          )} text-xs`}
+                        >
+                          {article.category}
+                        </Badge>
+                        {getStatusBadge(article.status)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Article Meta */}
+                  <div className="flex items-center justify-between pt-3 border-t border-gray-200 dark:border-gray-700">
+                    <div className="space-y-1 flex-1 min-w-0">
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                        <span className="font-medium">By:</span>{" "}
+                        <span className="truncate">{article.author}</span>
+                      </p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                        {article.status === "draft" ? (
+                          <span className="italic">Not published</span>
+                        ) : (
+                          formatDate(article.publishDate)
+                        )}
+                      </p>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditClick(article.id)}
+                        className="text-gray-600 dark:text-gray-400 hover:text-[#007BFF] dark:hover:text-[#007BFF] border-gray-300 dark:border-gray-600 h-8 w-8 p-0"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <DeleteArticleDialog
+                        articleId={article.id}
+                        deleteAction={deleteArticle}
+                        onDeleteSuccess={handleDeleteSuccess}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
           </div>
 
           {/* Pagination */}
-          <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 dark:border-gray-700">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 text-center sm:text-left">
               Showing{" "}
               <span className="font-medium">
                 {articles.length === 0
@@ -355,47 +442,41 @@ export const ArticleList: React.FC = () => {
                       total
                     )}`}
               </span>{" "}
-              of <span className="font-medium">{total}</span> articles
+              of <span className="font-medium">{total}</span>
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
               <Button
                 variant="outline"
                 size="sm"
                 disabled={page === 1 || loading}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="border-gray-300 dark:border-gray-600 min-w-[100px]"
+                className="border-gray-300 dark:border-gray-600 flex-1 sm:flex-none sm:min-w-[90px] text-sm"
               >
                 {loading && page > 1 ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Loading
-                  </>
+                  <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   "Previous"
                 )}
               </Button>
-              <span className="text-sm text-gray-600 dark:text-gray-400 px-2">
-                Page {page} of {totalPages || 1}
+              <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 px-2 whitespace-nowrap">
+                {page}/{totalPages || 1}
               </span>
               <Button
                 variant="outline"
                 size="sm"
                 disabled={page >= totalPages || loading}
                 onClick={() => setPage((p) => p + 1)}
-                className="border-gray-300 dark:border-gray-600 min-w-[100px]"
+                className="border-gray-300 dark:border-gray-600 flex-1 sm:flex-none sm:min-w-[90px] text-sm"
               >
                 {loading && page < totalPages ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Loading
-                  </>
+                  <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   "Next"
                 )}
               </Button>
             </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

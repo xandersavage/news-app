@@ -42,6 +42,12 @@ const Page = () => {
     router.push(`/articles/${article.slug}`);
   };
 
+  const handleCategoryFilter = (category: string | null) => {
+    setCategoryFilter(category);
+    // Scroll to top when filtering
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   if (loading) {
     return (
       <ThemeProvider>
@@ -62,14 +68,13 @@ const Page = () => {
       <div className="min-h-screen bg-white dark:bg-[#1E2124]">
         <Header
           currentCategory={categoryFilter}
-          onCategoryClick={(c) => {
-            setCategoryFilter(c);
-          }}
+          onCategoryClick={handleCategoryFilter}
         />
         <HomePage
           articles={articles}
           onArticleClick={handleArticleClick}
           categoryFilter={categoryFilter}
+          onCategoryFilter={handleCategoryFilter} // ADD THIS
         />
         <Footer />
       </div>
