@@ -1,12 +1,18 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { Search, Moon, Sun, Menu, X } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
-import { categories } from "@/data/mockData";
+import { categories } from "@/data/mockData"; // Assuming this is correct
+
+// The Header component should manage the navigation itself for categories
+// to ensure the user is always on the root page before filtering.
 
 interface HeaderProps {
+  // We can remove onCategoryClick and currentCategory if we handle filtering
+  // using query params directly in this component.
+  // For now, let's keep the props but update the logic.
   onCategoryClick: (category: string | null) => void;
   currentCategory: string | null;
 }
@@ -16,12 +22,32 @@ export const Header: React.FC<HeaderProps> = ({
   currentCategory,
 }) => {
   const router = useRouter();
+  const pathname = usePathname(); // Get the current path
   const { isDark, toggleTheme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
 
   const handleAdminClick = () => {
     router.push("/admin/login");
+  };
+
+  // FIX: This function now ensures navigation back to the root if not there.
+  const handleCategoryClick = (category: string | null) => {
+    // 1. If we are NOT on the homepage, navigate to the homepage.
+    if (pathname !== "/") {
+      // Use push to navigate to the homepage (root path)
+      router.push("/");
+    }
+
+    // 2. Call the filtering prop function (which likely sets a state/query param
+    // on the homepage component). This may be needed to update the 'currentCategory'
+    // highlight, but the navigation above is the crucial fix.
+    onCategoryClick(category);
+
+    // 3. Close the mobile menu if active
+    if (mobileMenuOpen) {
+      setMobileMenuOpen(false);
+    }
   };
 
   return (
@@ -31,7 +57,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
               <button
-                onClick={() => onCategoryClick(null)}
+                onClick={() => handleCategoryClick(null)} // Click on logo navigates home
                 className="text-gray-900 dark:text-white transition-colors"
               >
                 <span
@@ -126,11 +152,12 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       )}
 
+      {/* Desktop Navigation */}
       <nav className="hidden md:block bg-white dark:bg-[#1E2124]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-center gap-8 h-12">
             <button
-              onClick={() => onCategoryClick(null)}
+              onClick={() => handleCategoryClick(null)} // Use new handler
               className={`text-gray-700 dark:text-gray-300 hover:text-[#007BFF] dark:hover:text-[#007BFF] transition-colors ${
                 currentCategory === null ? "text-[#007BFF]" : ""
               }`}
@@ -140,7 +167,7 @@ export const Header: React.FC<HeaderProps> = ({
             {categories.slice(0, 7).map((category) => (
               <button
                 key={category}
-                onClick={() => onCategoryClick(category)}
+                onClick={() => handleCategoryClick(category)} // Use new handler
                 className={`text-gray-700 dark:text-gray-300 hover:text-[#007BFF] dark:hover:text-[#007BFF] transition-colors ${
                   currentCategory === category ? "text-[#007BFF]" : ""
                 }`}
@@ -152,15 +179,13 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </nav>
 
+      {/* Mobile Navigation */}
       {mobileMenuOpen && (
         <div className="md:hidden bg-white dark:bg-[#1E2124] border-b border-gray-200 dark:border-gray-800">
           <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex flex-col gap-4">
               <button
-                onClick={() => {
-                  onCategoryClick(null);
-                  setMobileMenuOpen(false);
-                }}
+                onClick={() => handleCategoryClick(null)} // Use new handler
                 className={`text-left py-2 text-gray-700 dark:text-gray-300 hover:text-[#007BFF] dark:hover:text-[#007BFF] transition-colors ${
                   currentCategory === null ? "text-[#007BFF]" : ""
                 }`}
@@ -170,10 +195,7 @@ export const Header: React.FC<HeaderProps> = ({
               {categories.map((category) => (
                 <button
                   key={category}
-                  onClick={() => {
-                    onCategoryClick(category);
-                    setMobileMenuOpen(false);
-                  }}
+                  onClick={() => handleCategoryClick(category)} // Use new handler
                   className={`text-left py-2 text-gray-700 dark:text-gray-300 hover:text-[#007BFF] dark:hover:text-[#007BFF] transition-colors ${
                     currentCategory === category ? "text-[#007BFF]" : ""
                   }`}

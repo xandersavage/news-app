@@ -11,7 +11,6 @@ export async function GET(req: Request) {
 
     const supabase = await createClient();
 
-    // Select article fields including foreign keys (category_id, author_id)
     let query = supabase
       .from("articles")
       .select(
@@ -19,16 +18,18 @@ export async function GET(req: Request) {
         { count: "exact" }
       );
 
+    // FIXED: Better status filtering
     if (status !== "all") {
-      if (status === "published") query = query.eq("published", true);
-      else if (status === "draft")
-        query = query.eq("published", false).is("publish_date", null);
-      else if (status === "scheduled")
-        query = query.eq("published", false).not("publish_date", "is", null);
+      if (status === "published") {
+        query = query.eq("published", true);
+      } else if (status === "draft") {
+        query = query.eq("published", false);
+      }
+      // Remove scheduled - we don't use it anymore
     }
 
     if (search) {
-      query = query.or(`title.ilike.%${search}%,excerpt.ilike.%${search}%`);
+      query = query.or(`title.ilike.%${search}%,slug.ilike.%${search}%`);
     }
 
     const from = (page - 1) * pageSize;
@@ -56,7 +57,6 @@ export async function GET(req: Request) {
       author_id: string | null;
     }>;
 
-    // Collect unique category and author ids to batch fetch related records
     const categoryIds = Array.from(
       new Set(rows.map((r) => r.category_id).filter(Boolean) as string[])
     );
@@ -71,23 +71,21 @@ export async function GET(req: Request) {
           .in("id", categoryIds)
       : { data: [] as Array<{ id: string; name: string }>, error: null };
 
-    const profileResult = authorIds.length
-      ? await supabase
-          .from("profiles")
-          .select("id, full_name")
-          .in("id", authorIds)
-      : { data: [] as Array<{ id: string; full_name: string }>, error: null };
+    // FIXED: Changed from 'profiles' to 'authors' table
+    const authorResult = authorIds.length
+      ? await supabase.from("authors").select("id, name").in("id", authorIds)
+      : { data: [] as Array<{ id: string; name: string }>, error: null };
 
     const categories = categoryResult.data || [];
-    const profiles = profileResult.data || [];
+    const authors = authorResult.data || [];
 
     const categoryMap: Record<string, string> = categories.reduce((acc, c) => {
       acc[c.id] = c.name;
       return acc;
     }, {} as Record<string, string>);
 
-    const profileMap: Record<string, string> = profiles.reduce((acc, p) => {
-      acc[p.id] = p.full_name;
+    const authorMap: Record<string, string> = authors.reduce((acc, a) => {
+      acc[a.id] = a.name;
       return acc;
     }, {} as Record<string, string>);
 
@@ -99,13 +97,10 @@ export async function GET(req: Request) {
       category: a.category_id
         ? categoryMap[a.category_id] || "Uncategorized"
         : "Uncategorized",
-      author: a.author_id ? profileMap[a.author_id] || "Unknown" : "Unknown",
+      author: a.author_id ? authorMap[a.author_id] || "Unknown" : "Unknown",
       publishDate: a.publish_date || a.created_at,
-      status: a.published
-        ? "published"
-        : a.publish_date
-        ? "scheduled"
-        : "draft",
+      // FIXED: Simplified status logic - only published or draft
+      status: a.published ? "published" : "draft",
       excerpt: a.excerpt || null,
     }));
 
