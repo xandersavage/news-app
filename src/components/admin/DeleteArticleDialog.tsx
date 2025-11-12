@@ -14,24 +14,25 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "../ui/alert-dialog";
-import { useRouter } from "next/navigation";
+// Remove: import { useRouter } from "next/navigation"; // No longer needed if relying on parent handler
 
 interface DeleteArticleDialogProps {
   articleId: string;
   deleteAction: (
     articleId: string
   ) => Promise<{ success: boolean; error?: string }>;
-  onDeleteSuccess?: () => void;
+  onDeleteSuccess?: (deletedArticleId: string) => void; // NOTE: Added argument here
 }
 
 export const DeleteArticleDialog: React.FC<DeleteArticleDialogProps> = ({
   articleId,
   deleteAction,
+  onDeleteSuccess, // <<< Destructure and use the prop
 }) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
-  const router = useRouter();
+  // const router = useRouter(); // <<< Remove this if you remove router.refresh()
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -42,8 +43,12 @@ export const DeleteArticleDialog: React.FC<DeleteArticleDialogProps> = ({
 
       if (result.success) {
         setOpen(false);
-        // Refresh the page to show updated list
-        router.refresh();
+        // FIX: Call the prop handler instead of router.refresh()
+        if (onDeleteSuccess) {
+          onDeleteSuccess(articleId); // Pass ID back to parent for optimistic update
+        }
+        // If onDeleteSuccess is NOT provided, a full refresh (router.refresh())
+        // would be necessary, but ArticleList provides it.
       } else {
         setError(result.error || "Failed to delete article");
       }

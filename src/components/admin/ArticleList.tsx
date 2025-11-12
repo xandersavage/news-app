@@ -152,7 +152,14 @@ export const ArticleList: React.FC = () => {
     });
   };
 
-  const handleDeleteSuccess = () => {
+  const handleDeleteSuccess = (deletedArticleId: string) => {
+    // Optimistic update - remove article from UI immediately
+    setArticles((prevArticles) =>
+      prevArticles.filter((article) => article.id !== deletedArticleId)
+    );
+    setTotal((prevTotal) => Math.max(0, prevTotal - 1));
+
+    // Also trigger a refresh to ensure consistency
     setRefreshTrigger((prev) => prev + 1);
   };
 
