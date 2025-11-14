@@ -76,7 +76,7 @@ const Page = () => {
           categoryFilter={categoryFilter}
           onCategoryFilter={handleCategoryFilter} // ADD THIS
         />
-        <Footer />
+        <Footer onCategoryClick={(category) => setCategoryFilter(category)} />
       </div>
     </ThemeProvider>
   );
