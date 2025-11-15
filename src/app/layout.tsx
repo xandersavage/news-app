@@ -15,11 +15,11 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Apocalypse Media - Quality Journalism & News",
-    template: "%s | Apocalypse Media",
+    default: "AM News - Quality Journalism & News",
+    template: "%s | AM News",
   },
   description:
-    "Delivering quality journalism and in-depth analysis on Politics, Technology, Business, Sports, Culture, Science, World News, and Opinion. Stay informed with Apocalypse Media.",
+    "Delivering quality journalism and in-depth analysis on Politics, Technology, Business, Sports, Culture, Science, World News, and Opinion. Stay informed with AM News.",
   keywords: [
     "news",
     "journalism",
@@ -34,17 +34,17 @@ export const metadata: Metadata = {
     "breaking news",
     "analysis",
   ],
-  authors: [{ name: "Apocalypse Media" }],
-  creator: "Apocalypse Media",
-  publisher: "Apocalypse Media",
+  authors: [{ name: "AM News" }],
+  creator: "AM News",
+  publisher: "AM News",
 
   // Open Graph (for Facebook, WhatsApp, LinkedIn, etc.)
   openGraph: {
     type: "website",
     locale: "en_US",
     url: "https://yourdomain.com", // Replace with your actual domain
-    siteName: "Apocalypse Media",
-    title: "Apocalypse Media - Quality Journalism & News",
+    siteName: "AM News",
+    title: "AM News - Quality Journalism & News",
     description:
       "Delivering quality journalism and in-depth analysis on the stories that matter most. Read breaking news, expert opinions, and comprehensive coverage.",
     images: [
@@ -52,7 +52,7 @@ export const metadata: Metadata = {
         url: "https://yourdomain.com/og-image.jpg", // Replace with your actual OG image URL
         width: 1200,
         height: 630,
-        alt: "Apocalypse Media - News & Journalism",
+        alt: "AM News - News & Journalism",
       },
     ],
   },
@@ -60,7 +60,7 @@ export const metadata: Metadata = {
   // Twitter Card
   twitter: {
     card: "summary_large_image",
-    title: "Apocalypse Media - Quality Journalism & News",
+    title: "AM News - Quality Journalism & News",
     description:
       "Delivering quality journalism and in-depth analysis on the stories that matter most.",
     images: ["https://yourdomain.com/og-image.jpg"], // Replace with your actual image URL
@@ -88,7 +88,7 @@ export const metadata: Metadata = {
   // },
 
   // App-specific metadata
-  applicationName: "Apocalypse Media",
+  applicationName: "AM News",
   category: "news",
 };
 

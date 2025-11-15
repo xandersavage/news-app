@@ -40,7 +40,7 @@ export const Footer: React.FC<FooterProps> = ({ onCategoryClick }) => {
             <div className="mb-4">
               <img
                 src="/logo-dark.svg"
-                alt="Apocalypse Media"
+                alt="AM News"
                 className="h-10 w-auto mb-4"
               />
             </div>
@@ -224,7 +224,7 @@ export const Footer: React.FC<FooterProps> = ({ onCategoryClick }) => {
         <div className="pt-8 border-t border-gray-800">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <p className="text-gray-400 text-sm text-center sm:text-left">
-              © {currentYear} Apocalypse Media. All rights reserved.
+              © {currentYear} AM News. All rights reserved.
             </p>
             <p className="text-gray-500 text-xs text-center sm:text-right">
               Built with passion for quality journalism
